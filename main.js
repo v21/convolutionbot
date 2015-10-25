@@ -1,115 +1,29 @@
 
+var size = 150 + Math.ceil(300 * Math.random());
+console.log("size " + size);
 
-var canvas = document.getElementById("canvas");
-var ctx = canvas.getContext("2d");
+
+var Canvas = require('canvas')
+  , Image = Canvas.Image
+  , canvas = new Canvas(size, size)
+  , ctx = canvas.getContext('2d');
+
+
 
 ctx.mozImageSmoothingEnabled = false;
 ctx.webkitImageSmoothingEnabled = false;
 ctx.msImageSmoothingEnabled = false;
 ctx.imageSmoothingEnabled = false;
 
+ctx.filter = 'nearest';
+ctx.patternQuality = 'nearest';
+ctx.antialias = 'none';
+
 
 var getImageData = function(w,h)
 {
 	return ctx.getImageData(0,0,canvas.width, canvas.height)
 };
-
-(function() {
-    var canvas = document.getElementById('canvas'),
-            context = canvas.getContext('2d');
-
-    // resize the canvas to fill browser window dynamically
-    window.addEventListener('resize', resizeCanvas, false);
-
-    function resizeCanvas() {
-      var w = canvas.width;
-      var h = canvas.height;
-  		var imageData = ctx.getImageData(0,0,canvas.width, canvas.height);
-
-      canvas.width = window.innerWidth / 2;
-      canvas.height = window.innerHeight / 2;
-
-      var offsetX = 0;
-      if (w < canvas.width)
-      {
-        offsetX = (canvas.width - w) / 2;
-      }
-      
-      var offsetY = 0;
-      if (h < canvas.height)
-      {
-        offsetY = (canvas.height - h) / 2;
-      }
-  		ctx.putImageData(imageData, offsetX, offsetY);
-
-
-    }
-    resizeCanvas();
-
-
-})();
-
-
-/*
-var img = new Image();
-img.src = 'https://mdn.mozillademos.org/files/5397/rhino.jpg';
-img.onload = function() {
-  draw(this);
-};
-
-function draw(img) {
-  var canvas = document.getElementById('canvas');
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0);
-  img.style.display = 'none';
-  var imageData = ctx.getImageData(0,0,canvas.width, canvas.height);
-  var data = imageData.data;
-    
-
-  var invert = function() {
-    for (var i = 0; i < data.length; i += 4) {
-      data[i]     = 255 - data[i];     // red
-      data[i + 1] = 255 - data[i + 1]; // green
-      data[i + 2] = 255 - data[i + 2]; // blue
-    }
-    ctx.putImageData(imageData, 0, 0);
-  };
-
-  var grayscale = function() {
-    for (var i = 0; i < data.length; i += 4) {
-      var avg = (data[i] + data[i +1] + data[i +2]) / 3;
-      data[i]     = avg; // red
-      data[i + 1] = avg; // green
-      data[i + 2] = avg; // blue
-    }
-    ctx.putImageData(imageData, 0, 0);
-  };
-
-  var grayscalebtn = document.getElementById('grayscalebtn');
-  grayscalebtn.addEventListener('click', grayscale);
-}
-*/
-
-
-var patternfill = function() {
-
-	var img = new Image();
-	img.src = 'macpaintpatterns/' + getRandomInt(1,37) + '.gif';
-	img.onload = function() {
-	    var canvas = document.getElementById('canvas');
-		var ctx = canvas.getContext('2d');
-		
-
-		for (var i = 0; i < canvas.width; i += img.width) {
-			for (var j = 0; j < canvas.height; j += img.height) {
-				ctx.drawImage(img, i, j);
-			};
-		};
-		
-	};
-
-}
-patternfill(); //onload
 
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -152,7 +66,7 @@ var threshold = function(pixels, val)
   return pixels;
 }
 
-var tmpCanvas = document.createElement('canvas');
+var tmpCanvas = new Canvas(canvas.width, canvas.height);
 var tmpCtx = tmpCanvas.getContext('2d');
 var tmpImageData = null
 
@@ -161,7 +75,6 @@ var createImageData = function(w,h) {
 	if (tmpImageData == null || tmpImageData.width != w || tmpImageData.height != h)
   	{
   		tmpImageData = tmpCtx.createImageData(w,h);
-      console.log("creating tmpImageData");
   	}
   	return tmpImageData;
 };
@@ -214,14 +127,6 @@ var convolve = function(pixels, weights, opaque) {
 
 
 
-var anim = function()
-{
-  convolveWithMatrix(rand);
-
-
-
-  window.requestAnimationFrame(anim);
-}
 var convolveWithMatrix = function(convolveMatrix)
 {
 
@@ -253,16 +158,112 @@ var genConvolveMatrix = function(range)
 
 var matrixScale = Math.random() * 5;
 
-var setMatrixScale = function()
+
+var onload = function()
 {
-  document.title = "";
+  var GIFEncoder = require('gifencoder');
+var fs = require('fs');
+
+var encoder = new GIFEncoder(canvas.width, canvas.height);
+// stream the results as they are available into myanimated.gif
+encoder.createReadStream().pipe(fs.createWriteStream('temp.gif'));
+
+encoder.start();
+encoder.setRepeat(0);   // 0 for repeat, -1 for no-repeat
+var delay = 10 + Math.random() * 500;
+console.log("delay " + delay);
+encoder.setDelay(delay);  // frame delay in ms
+encoder.setQuality(10); // image quality. 10 is default.
+
+
+if (Math.random() > 0.5)
+{
+  addRandomNoise();
+}
+
+  genConvolve();
+  console.log(rand);
+  var frames = 300 * Math.random();
+  console.log("frames: " + frames);
+  for (var i = 0; i < frames; i++) {
+    convolveWithMatrix(rand);
+    encoder.addFrame(ctx);
+    console.log("frame " + i);
+  };
+
+encoder.finish();
+uploadToTumblr(encoder.out.getData());
+
+
+}
+
+
+
+var getMatrixString = function()
+{
+  outp = " ";
   for (var i = 0; i < Math.ceil(matrixScale * 2); i++) {
     var titleElements = ["▟","▞","▖","▗▘","▙","▚","▛","▜","▝"];
 
-    document.title += titleElements[Math.floor(Math.random() * titleElements.length)];
+    outp += titleElements[Math.floor(Math.random() * titleElements.length)];
   };
+  outp += "\n[" + rand.join(", ") + "]";
+  return outp; 
 };
-setMatrixScale();
+
+var uploadToTumblr = function(image)
+{
+  var tumblr = require('tumblr.js');
+var client = tumblr.createClient({
+  consumer_key: process.env.TUMBLR_CONSUMER_KEY,
+  consumer_secret: process.env.TUMBLR_CONSUMER_SECRET,
+  token: process.env.TUMBLR_ACCESS_TOKEN,
+  token_secret: process.env.TUMBLR_ACCESS_TOKEN_SECRET
+});
+
+
+var options = 
+{
+  caption: getMatrixString(),
+  data : "temp.gif", 
+  link : "http://v21.io/%E2%96%9B%E2%96%9A%E2%96%9E%E2%96%97/",
+  tags : "gif, epilepsy warning"
+}
+
+client.photo("dkmfxr0axh7rumhs3ppv", options, function(err, resp)
+  {
+    if (err) throw err;
+    console.log("success");
+  });
+
+// dkmfxr0axh7rumhs3ppv
+}
+
+
+
+var patternfill = function() {
+var fs = require("fs")
+  fs.readFile(__dirname + '/macpaintpatterns/' + getRandomInt(1,37) + '.gif', function(err, squid){
+    if (err) throw err;
+    img = new Image;
+    img.src = squid;
+    ctx.drawImage(img, 0, 0, img.width / 4, img.height / 4);
+    for (var i = 0; i < canvas.width; i += img.width) {
+        for (var j = 0; j < canvas.height; j += img.height) {
+          ctx.drawImage(img, i, j);
+        };
+      };
+
+      onload();
+    });
+
+
+    
+    
+
+
+}
+patternfill(); //onload
 
 
 
@@ -289,87 +290,4 @@ var genConvolve = function(range)
   rand = genConvolveMatrix(matrixScale);
 }
 
-var genConvolveId = setInterval(genConvolve, 10000); 
 
-
-window.requestAnimationFrame(anim);
-
-
-canvas.addEventListener('click', genConvolve, false);
-
-var interval = 10000; //10 secs
-var lastTime = 0;
-var sma3 = simple_moving_averager(3);
-
-window.addEventListener("keypress", function(e) {
-  var code = (e.keyCode ? e.keyCode : e.which);
-  if (code === 0 || code === 32) {
-
-    var time = Date.now();
-    var delta = time - lastTime;
-
-    if (delta > 60000 || lastTime == 0) { //over a minute has elapsed, or first sample
-      sma3 = simple_moving_averager(3); //reset sma
-    }
-    else
-    {
-      interval = sma3(delta);
-      clearInterval(genConvolveId);
-      genConvolveId = setInterval(genConvolve, interval); 
-      console.log(interval);
-    }
-
- 
-    lastTime = time;
-
-
-    genConvolve();
-  }
-});
-
-
-function simple_moving_averager(period) {
-    var nums = [];
-    return function(num) {
-        nums.push(num);
-        if (nums.length > period)
-            nums.splice(0,1);  // remove the first element of the array
-        var sum = 0;
-        for (var i in nums)
-            sum += nums[i];
-        var n = period;
-        if (nums.length < period)
-            n = nums.length;
-        return(sum/n);
-    }
-}
- 
-
-window.addEventListener("keypress", function(e) {
-  var code = (e.keyCode ? e.keyCode : e.which);
-  if (code ===  13) {
-    patternfill();
-
-  }
-});
-
-
-
-window.addEventListener("keypress", function(e) {
-  var code = (e.keyCode ? e.keyCode : e.which);
-  if (code ===  219 || code === 91) { //[
-    matrixScale = Math.max(0.01, matrixScale - 0.2);
-    console.log(matrixScale);
-    setMatrixScale(); 
-  }
-});
-
-
-window.addEventListener("keypress", function(e) {
-  var code = (e.keyCode ? e.keyCode : e.which);
-  if (code === 221 || code === 93) { //[
-    matrixScale = Math.min(5, matrixScale + 0.2); 
-    console.log(matrixScale);
-    setMatrixScale();
-  }
-}); 
