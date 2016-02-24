@@ -1,6 +1,6 @@
 
 var size = 150 + Math.ceil(300 * Math.random());
-console.log("size " + size);
+
 
 
 var Canvas = require('canvas')
